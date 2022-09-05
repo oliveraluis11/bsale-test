@@ -1,14 +1,12 @@
-from typing import List
-
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
 from fastapi.openapi.utils import get_openapi
+from sqlalchemy.orm import Session
+from typing import List
 
 import crud
 import schemas
 from database import SessionLocal
-
 
 app = FastAPI()
 origins = [
@@ -33,20 +31,25 @@ def get_db():
         db.close()
 
 
-@app.get("/categories", response_model=List[schemas.Category])
+@app.get("/api/categories", response_model=List[schemas.Category])
 def read_categories(db: Session = Depends(get_db)):
     categories = crud.get_categories(db)
     return categories
 
 
-@app.get("/products", response_model=List[schemas.Product])
-def read_products(skip: int = 0, category_id: int = -1, limit: int = 100, db: Session = Depends(get_db)):
-    products = crud.get_products(db, skip=skip, limit=limit) \
-        if category_id == -1 else crud.get_products_by_category(db, category_id)
+@app.get("/api/products", response_model=List[schemas.Product])
+def read_products(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    products = crud.get_products(db, skip=skip, limit=limit)
     return products
 
 
-@app.get("/products/{id}", response_model=schemas.Product)
+@app.get("/api/categories/{id}/products", response_model=List[schemas.Product])
+def read_products_by_category(id: int, db: Session = Depends(get_db), skip: int = 0, limit: int = 100):
+    products = crud.get_products_by_category(db, id, skip, limit)
+    return products
+
+
+@app.get("/api/products/{id}", response_model=schemas.Product)
 def read_product_by_id(id: int, db: Session = Depends(get_db)):
     product = crud.get_products_by_id(db, product_id=id)
     if product is None:
@@ -68,5 +71,6 @@ def custom_openapi():
     }
     app.openapi_schema = openapi_schema
     return app.openapi_schema
+
 
 app.openapi = custom_openapi
